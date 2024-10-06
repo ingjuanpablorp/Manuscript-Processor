@@ -1,9 +1,8 @@
 package co.com.mevieval.usecase.findclues;
 
-import java.util.Arrays;
-
 import lombok.RequiredArgsConstructor;
-import reactor.core.publisher.Mono;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @RequiredArgsConstructor
 public class FindCluesUseCase {
@@ -14,23 +13,145 @@ public class FindCluesUseCase {
     static final String BOTTOM_RIGHT_ORIENTATION = "BR";
     static final String BOTTOM_LEFT_ORIENTATION = "BL";
     static final String BOTTOM_ORIENTATION = "BOTTOM";
-    static final String TOP_RIGHT_ORIENTATION = "TR";
     static final String RIGHT_ORIENTATION = "RIGHT";
-    static final String TOP_LEFT_ORIENTATION = "TL";
-    static final String LEFT_ORIENTATION = "LEFT";
-    static final String TOP_ORIENTATION = "UP";
 
     /**
      * Método para recorrer el flux de arreglos
      */
-    public void findClues(){
-        //TODO: Iniciar a recorrer cada fila
+    public void findClues(String[] manuscript) {
 
-        String[] manuscript = {"RTHGQW", "XRLORE", "NARURR", "REVRAL", "EGSILE"};
+        boolean existManuscripts = false;
 
-        var a = Mono.just(manuscript);
+        for (int i = 0; i < manuscript.length; i++) {
+            for (int j = 0; j < manuscript[i].length(); j++) {
+                if (search(i, j, manuscript, manuscript[i].charAt(j))) {
+                    existManuscripts = true;
+                }
+            }
+        }
 
-        System.err.println(a.subscribe());
+        if (existManuscripts)
+            System.err.println("Existen pistas");
+
     }
 
+    private boolean search(int i, int j, String[] manuscript, char character) {
+
+        Map<String, Boolean> rules = calculateRules(i, j, manuscript);
+        boolean existBottomRight = false;
+        boolean existBottomLeft = false;
+        boolean existBottom = false;
+        boolean existRight = false;
+
+        if (rules.get(BOTTOM_RIGHT_ORIENTATION)) {
+            existBottomRight = existManuscriptInBottomRight(i, j, manuscript, character);
+        }
+
+        if (rules.get(BOTTOM_LEFT_ORIENTATION)) {
+            existBottomLeft = existManuscriptInBottomLeft(i, j, manuscript, character);
+        }
+
+        if (rules.get(BOTTOM_ORIENTATION)) {
+            existBottom = existManuscriptInBottom(i, j, manuscript, character);
+        }
+
+        if (rules.get(RIGHT_ORIENTATION)) {
+            existRight = existManuscriptInRight(i, j, manuscript, character);
+        }
+
+        if (existBottomLeft)
+            System.err.println("existe manuscripto en el recorrido abajo izquierda con el caracter: " + character);
+        if (existBottomRight)
+            System.err.println("existe manuscrito en el recorrido abajo derecha con el caracter: " + character);
+        if (existBottom)
+            System.err.println("existe manuscrito en el recorrido abajo con el caracter: " + character);
+        if (existRight)
+            System.err.println("existe manuscrito en el recorrido derecha con el caracter: " + character);
+
+        return existBottomLeft || existBottomRight || existBottom || existRight;
+        // Si la ocurrencia es 3 retorne true y guarde en base de datos.
+    }
+
+    private boolean existManuscriptInRight(int i, int j, String[] manuscript, char character) {
+        int counterOfOcurrences = 0;
+
+        for (int k = 1; k <= 3; k++) {
+            if (manuscript[i].charAt(j + k) == character) {
+                counterOfOcurrences++;
+                if (k == 3)
+                    return counterOfOcurrences == 3;
+            } else {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private boolean existManuscriptInBottom(int i, int j, String[] manuscript, char character) {
+        int counterOfOcurrences = 0;
+
+        for (int k = 1; k <= 3; k++) {
+            if (manuscript[i + k].charAt(j) == character) {
+                counterOfOcurrences++;
+                if (k == 3)
+                    return counterOfOcurrences == 3;
+            } else {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private boolean existManuscriptInBottomLeft(int i, int j, String[] manuscript, char character) {
+        int counterOfOcurrences = 0;
+
+        for (int k = 1; k <= 3; k++) {
+            if (manuscript[i + k].charAt(j - k) == character) {
+                counterOfOcurrences++;
+                if (k == 3)
+                    return counterOfOcurrences == 3;
+            } else {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private boolean existManuscriptInBottomRight(int i, int j, String[] manuscript, char character) {
+        int counterOfOcurrences = 0;
+
+        for (int k = 1; k <= 3; k++) {
+            if (manuscript[i + k].charAt(j + k) == character) {
+                counterOfOcurrences++;
+                if (k == 3)
+                    return counterOfOcurrences == 3;
+            } else {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private Map<String, Boolean> calculateRules(int i, int j, String[] manuscript) {
+        Map<String, Boolean> rules = new LinkedHashMap<>();
+
+        rules.put(BOTTOM_RIGHT_ORIENTATION, true);
+        rules.put(BOTTOM_LEFT_ORIENTATION, true);
+        rules.put(BOTTOM_ORIENTATION, true);
+        rules.put(RIGHT_ORIENTATION, true);
+
+        if (j < 3) {
+            rules.replace(BOTTOM_LEFT_ORIENTATION, false);
+        }
+        if (j + 3 > manuscript[i].length() - 1) {
+            rules.replace(RIGHT_ORIENTATION, false);
+            rules.replace(BOTTOM_RIGHT_ORIENTATION, false);
+        }
+        if (i + 3 > manuscript.length - 1) {
+            rules.replace(BOTTOM_LEFT_ORIENTATION, false);
+            rules.replace(BOTTOM_RIGHT_ORIENTATION, false);
+            rules.replace(BOTTOM_ORIENTATION, false);
+        }
+        return rules;
+    }
 }
