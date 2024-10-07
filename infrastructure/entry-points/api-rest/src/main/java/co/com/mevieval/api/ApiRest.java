@@ -20,7 +20,10 @@ public class ApiRest {
 
     @PostMapping("/clue")
     public ResponseEntity<Void> findClues(@RequestBody Manuscript manuscript){
-        useCase.findClues(manuscript);
-        return ResponseEntity.ok().build();
+        
+        if(useCase.findClues(manuscript)){
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.badRequest().build();
     }
 }

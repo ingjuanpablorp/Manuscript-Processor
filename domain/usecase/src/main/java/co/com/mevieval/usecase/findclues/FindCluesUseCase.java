@@ -24,13 +24,11 @@ public class FindCluesUseCase {
     /**
      * Método para recorrer el flux de arreglos
      */
-    public void findClues(Manuscript m) {
+    public Boolean findClues(Manuscript m) {
 
         /**
          * TODO: Cambia cuando migre la impl imperativa a reactiva
          */
-        manuscriptRepository.save(m).subscribe();
-
         var manuscript = m.getManuscript();
         
         boolean existManuscripts = false;
@@ -45,6 +43,10 @@ public class FindCluesUseCase {
 
         if (existManuscripts)
             System.err.println("Clues Found");
+        
+        return manuscriptRepository
+        .save(m)
+        .block();
     }
 
     private boolean search(int i, int j, List<String> manuscript, char character) {

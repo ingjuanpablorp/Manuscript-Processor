@@ -5,6 +5,6 @@ import reactor.core.publisher.Mono;
 
 public interface ManuscriptRepository {
 
-    Mono<Void> save(Manuscript manuscript);
+    Mono<Boolean> save(Manuscript manuscript);
 
 }

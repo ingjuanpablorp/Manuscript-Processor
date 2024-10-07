@@ -8,7 +8,9 @@ import reactor.core.publisher.Mono;
 import org.springframework.stereotype.Repository;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 
 @Repository
 public class DynamoDBTemplateAdapter implements ManuscriptRepository{
@@ -24,12 +26,37 @@ public class DynamoDBTemplateAdapter implements ManuscriptRepository{
     }
 
     @Override
-    public Mono<Void> save(Manuscript manuscript) {
-        return Mono.fromFuture(this.table
-        .putItem(mapper.toEntity(manuscript)))
+    public Mono<Boolean> save(Manuscript manuscript) {
+        ManuscriptEntity manuscriptEntity = mapper.toEntity(manuscript);
+
+        findManuscript(manuscriptEntity.getUniqueId()).subscribe();
+
+        return findManuscript(manuscriptEntity.getUniqueId())
+        .flatMap(exists -> {
+            if(exists){
+                return Mono.just(false);
+            } else{
+                return Mono.fromFuture(this.table.putItem(mapper.toEntity(manuscript)))
+                .then(Mono.just(true))
+                .onErrorResume(e -> {
+                    System.err.println("Error saving Manuscript: " + e.getMessage());
+                    return Mono.just(false);
+                });
+            }
+        });
+    }
+
+    private Mono<Boolean> findManuscript(String manuscriptId){        
+
+        return Mono.fromFuture(this.table.getItem(GetItemEnhancedRequest.builder()
+        .key(Key.builder()
+        .partitionValue(manuscriptId).build())
+        .build()))
+        .map(item -> item != null)
+        .defaultIfEmpty(false)
         .onErrorResume(e -> {
-            System.err.println("Error saving Manuscript " + e.getMessage());
-            return Mono.empty();
+            System.err.println("Error checking existence of Manuscript: " + e.getMessage());
+            return Mono.just(false);
         });
     }
 }
