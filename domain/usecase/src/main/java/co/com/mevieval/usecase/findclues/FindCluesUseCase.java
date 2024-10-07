@@ -2,10 +2,16 @@ package co.com.mevieval.usecase.findclues;
 
 import lombok.RequiredArgsConstructor;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+
+import co.com.mevieval.model.manuscript.Manuscript;
+import co.com.mevieval.model.manuscript.gateways.ManuscriptRepository;
 
 @RequiredArgsConstructor
 public class FindCluesUseCase {
+
+    private final ManuscriptRepository manuscriptRepository;
 
     /**
      * Orientation of ways in loop
@@ -18,24 +24,30 @@ public class FindCluesUseCase {
     /**
      * Método para recorrer el flux de arreglos
      */
-    public void findClues(String[] manuscript) {
+    public void findClues(Manuscript m) {
 
+        /**
+         * TODO: Cambia cuando migre la impl imperativa a reactiva
+         */
+        manuscriptRepository.save(m).subscribe();
+
+        var manuscript = m.getManuscript();
+        
         boolean existManuscripts = false;
 
-        for (int i = 0; i < manuscript.length; i++) {
-            for (int j = 0; j < manuscript[i].length(); j++) {
-                if (search(i, j, manuscript, manuscript[i].charAt(j))) {
+        for (int i = 0; i < manuscript.size(); i++) {
+            for (int j = 0; j < manuscript.get(i).length(); j++) {
+                if (search(i, j, manuscript, manuscript.get(i).charAt(j))) {
                     existManuscripts = true;
                 }
             }
         }
 
         if (existManuscripts)
-            System.err.println("Existen pistas");
-
+            System.err.println("Clues Found");
     }
 
-    private boolean search(int i, int j, String[] manuscript, char character) {
+    private boolean search(int i, int j, List<String> manuscript, char character) {
 
         Map<String, Boolean> rules = calculateRules(i, j, manuscript);
         boolean existBottomRight = false;
@@ -72,11 +84,11 @@ public class FindCluesUseCase {
         // Si la ocurrencia es 3 retorne true y guarde en base de datos.
     }
 
-    private boolean existManuscriptInRight(int i, int j, String[] manuscript, char character) {
+    private boolean existManuscriptInRight(int i, int j, List<String> manuscript, char character) {
         int counterOfOcurrences = 0;
 
         for (int k = 1; k <= 3; k++) {
-            if (manuscript[i].charAt(j + k) == character) {
+            if (manuscript.get(i).charAt(j + k) == character) {
                 counterOfOcurrences++;
                 if (k == 3)
                     return counterOfOcurrences == 3;
@@ -87,11 +99,11 @@ public class FindCluesUseCase {
         return false;
     }
 
-    private boolean existManuscriptInBottom(int i, int j, String[] manuscript, char character) {
+    private boolean existManuscriptInBottom(int i, int j, List<String> manuscript, char character) {
         int counterOfOcurrences = 0;
 
         for (int k = 1; k <= 3; k++) {
-            if (manuscript[i + k].charAt(j) == character) {
+            if (manuscript.get(i + k).charAt(j) == character) {
                 counterOfOcurrences++;
                 if (k == 3)
                     return counterOfOcurrences == 3;
@@ -102,11 +114,11 @@ public class FindCluesUseCase {
         return false;
     }
 
-    private boolean existManuscriptInBottomLeft(int i, int j, String[] manuscript, char character) {
+    private boolean existManuscriptInBottomLeft(int i, int j, List<String> manuscript, char character) {
         int counterOfOcurrences = 0;
 
         for (int k = 1; k <= 3; k++) {
-            if (manuscript[i + k].charAt(j - k) == character) {
+            if (manuscript.get(i + k).charAt(j - k) == character) {
                 counterOfOcurrences++;
                 if (k == 3)
                     return counterOfOcurrences == 3;
@@ -117,11 +129,11 @@ public class FindCluesUseCase {
         return false;
     }
 
-    private boolean existManuscriptInBottomRight(int i, int j, String[] manuscript, char character) {
+    private boolean existManuscriptInBottomRight(int i, int j, List<String> manuscript, char character) {
         int counterOfOcurrences = 0;
 
         for (int k = 1; k <= 3; k++) {
-            if (manuscript[i + k].charAt(j + k) == character) {
+            if (manuscript.get(i + k).charAt(j + k) == character) {
                 counterOfOcurrences++;
                 if (k == 3)
                     return counterOfOcurrences == 3;
@@ -132,7 +144,7 @@ public class FindCluesUseCase {
         return false;
     }
 
-    private Map<String, Boolean> calculateRules(int i, int j, String[] manuscript) {
+    private Map<String, Boolean> calculateRules(int i, int j, List<String> manuscript) {
         Map<String, Boolean> rules = new LinkedHashMap<>();
 
         rules.put(BOTTOM_RIGHT_ORIENTATION, true);
@@ -143,11 +155,11 @@ public class FindCluesUseCase {
         if (j < 3) {
             rules.replace(BOTTOM_LEFT_ORIENTATION, false);
         }
-        if (j + 3 > manuscript[i].length() - 1) {
+        if (j + 3 > manuscript.get(i).length() - 1) {
             rules.replace(RIGHT_ORIENTATION, false);
             rules.replace(BOTTOM_RIGHT_ORIENTATION, false);
         }
-        if (i + 3 > manuscript.length - 1) {
+        if (i + 3 > manuscript.size() - 1) {
             rules.replace(BOTTOM_LEFT_ORIENTATION, false);
             rules.replace(BOTTOM_RIGHT_ORIENTATION, false);
             rules.replace(BOTTOM_ORIENTATION, false);

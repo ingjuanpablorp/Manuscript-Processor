@@ -11,6 +11,7 @@ spring:
       path: "/h2"
   profiles:
     include: null
+    active: local
 management:
   endpoints:
     web:
@@ -22,3 +23,6 @@ management:
         enabled: true
 cors:
   allowed-origins: "http://localhost:4200,http://localhost:8080"
+aws:
+  dynamodb:
+    endpoint: http://localhost:8010

@@ -1,6 +1,10 @@
 package co.com.mevieval.model.manuscript;
 import lombok.Builder;
 import lombok.Data;
+
+import java.io.Serializable;
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
@@ -8,6 +12,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
-public class Manuscript {
-    private String[] manuscript;
+public class Manuscript implements Serializable{
+    private List<String> manuscript;
 }
