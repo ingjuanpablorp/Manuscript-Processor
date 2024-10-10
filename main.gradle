@@ -16,7 +16,7 @@ subprojects {
     apply plugin: 'info.solidsoft.pitest'
 
     compileJava.dependsOn validateStructure
-    sourceCompatibility = JavaVersion.VERSION_17
+    //sourceCompatibility = JavaVersion.VERSION_17
 
     //build.dependsOn 'pitest'
 
@@ -103,5 +103,5 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.named('wrapper') {
-    gradleVersion = '8.10.1'
+    gradleVersion = '8.7'
 }
