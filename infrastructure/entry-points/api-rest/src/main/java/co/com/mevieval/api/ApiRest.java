@@ -1,7 +1,9 @@
 package co.com.mevieval.api;
 
 import lombok.AllArgsConstructor;
+import reactor.core.publisher.Mono;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,11 +21,9 @@ public class ApiRest {
     private final FindCluesUseCase useCase;
 
     @PostMapping("/clue")
-    public ResponseEntity<Void> findClues(@RequestBody Manuscript manuscript){
-        
-        if(useCase.findClues(manuscript)){
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.badRequest().build();
+    public Mono<ResponseEntity<Void>> findClues(@RequestBody Manuscript manuscript){
+        return useCase.findClues(manuscript)
+        .map(result -> result ? ResponseEntity.ok().<Void>build() : ResponseEntity.badRequest().<Void>build())
+        .onErrorReturn(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).<Void>build());
     }
 }

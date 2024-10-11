@@ -14,4 +14,8 @@ import lombok.NoArgsConstructor;
 @Builder(toBuilder = true)
 public class Manuscript implements Serializable{
     private List<String> manuscript;
+    private int clue;
+    private int noClue;
+
+    private double ratio;
 }

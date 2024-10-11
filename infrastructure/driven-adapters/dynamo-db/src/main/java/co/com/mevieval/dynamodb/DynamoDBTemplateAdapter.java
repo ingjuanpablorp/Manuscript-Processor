@@ -12,31 +12,29 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 
+import java.util.Objects;
+
 @Repository
 public class DynamoDBTemplateAdapter implements ManuscriptRepository{
 
-    private final DynamoDbEnhancedAsyncClient enhancedAsyncClient;
     private final DynamoDbAsyncTable<ManuscriptEntity> table;
     private final ManuscriptMapper mapper;
 
     public DynamoDBTemplateAdapter(DynamoDbEnhancedAsyncClient enhancedAsyncClient, ManuscriptMapper mapper){
-        this.enhancedAsyncClient = enhancedAsyncClient;
         this.mapper = mapper;
-        this.table = this.enhancedAsyncClient.table("manuscripts", TableSchema.fromBean(ManuscriptEntity.class));
+        this.table = enhancedAsyncClient.table("manuscripts", TableSchema.fromBean(ManuscriptEntity.class));
     }
 
     @Override
     public Mono<Boolean> save(Manuscript manuscript) {
         ManuscriptEntity manuscriptEntity = mapper.toEntity(manuscript);
 
-        findManuscript(manuscriptEntity.getUniqueId()).subscribe();
-
         return findManuscript(manuscriptEntity.getUniqueId())
         .flatMap(exists -> {
-            if(exists){
+            if(Boolean.TRUE.equals(exists)){
                 return Mono.just(false);
             } else{
-                return Mono.fromFuture(this.table.putItem(mapper.toEntity(manuscript)))
+                return Mono.fromFuture(this.table.putItem(manuscriptEntity))
                 .then(Mono.just(true))
                 .onErrorResume(e -> {
                     System.err.println("Error saving Manuscript: " + e.getMessage());
@@ -52,7 +50,7 @@ public class DynamoDBTemplateAdapter implements ManuscriptRepository{
         .key(Key.builder()
         .partitionValue(manuscriptId).build())
         .build()))
-        .map(item -> item != null)
+        .map(Objects::nonNull)
         .defaultIfEmpty(false)
         .onErrorResume(e -> {
             System.err.println("Error checking existence of Manuscript: " + e.getMessage());
