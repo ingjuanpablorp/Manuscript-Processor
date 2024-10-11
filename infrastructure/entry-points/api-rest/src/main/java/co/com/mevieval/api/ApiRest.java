@@ -23,7 +23,7 @@ public class ApiRest {
     @PostMapping("/clue")
     public Mono<ResponseEntity<Void>> findClues(@RequestBody Manuscript manuscript){
         return useCase.findClues(manuscript)
-        .map(result -> result ? ResponseEntity.ok().<Void>build() : ResponseEntity.badRequest().<Void>build())
+        .map(result -> result ? ResponseEntity.ok().<Void>build() : ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>body(null))
         .onErrorReturn(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).<Void>build());
     }
 
