@@ -60,6 +60,14 @@ public class FindCluesUseCase {
                 .map(result -> m.getClue() != 0);
     }
 
+    /**
+     * Método para calcular estadisticas por manuscrito
+     */
+
+    public Mono<Object> calculateStats(Manuscript m){
+        return manuscriptRepository.findManuscript(m);
+    }
+
     private static Mono<Integer> triggerBottomRightOrientation(Manuscript m, Map<String, Boolean> rules, int i, int j, char searchCriteria) {
 
         List<Character> charactersToCheck = new ArrayList<>();

@@ -26,4 +26,16 @@ public class ApiRest {
         .map(result -> result ? ResponseEntity.ok().<Void>build() : ResponseEntity.badRequest().<Void>build())
         .onErrorReturn(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).<Void>build());
     }
+
+    @PostMapping("/stats")
+    public Mono<ResponseEntity<?>> getStatsManuscript(@RequestBody Manuscript manuscript){
+        return useCase.calculateStats(manuscript)
+                .map(result -> result != null ? ResponseEntity.ok().body(result) : ResponseEntity.noContent().<Void>build())
+                .onErrorReturn(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).<Void>build());
+    }
+
+    /**
+     * TODO: crear un endpoint para acceder a unas estadisticas generales de
+     * las búsquedas.
+     */
 }

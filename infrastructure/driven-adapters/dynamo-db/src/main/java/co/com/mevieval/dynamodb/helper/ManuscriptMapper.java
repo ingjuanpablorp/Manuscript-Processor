@@ -10,8 +10,6 @@ public class ManuscriptMapper {
     public ManuscriptEntity toEntity(Manuscript manuscript){
         ManuscriptEntity entity = new ManuscriptEntity();
 
-        System.err.println(manuscript.toString());
-
         entity.setUniqueId(String.valueOf(String.join(",", manuscript.getManuscript()).hashCode()));
         entity.setContent(manuscript.getManuscript());
         entity.setCountClueFound(manuscript.getClue());
@@ -22,6 +20,14 @@ public class ManuscriptMapper {
 
         entity.setRatio(ratio);
         return entity;
+    }
+
+    public Stat toStat(ManuscriptEntity entity){
+        return Stat.builder()
+                .count_clue_found(entity.getCountClueFound())
+                .count_no_clue(entity.getCountNoClue())
+                .ratio(entity.getRatio())
+                .build();
     }
 
     public Manuscript toDomain(ManuscriptEntity entity){

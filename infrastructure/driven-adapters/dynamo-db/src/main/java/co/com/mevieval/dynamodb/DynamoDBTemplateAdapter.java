@@ -1,5 +1,6 @@
 package co.com.mevieval.dynamodb;
 
+import co.com.mevieval.dynamodb.exceptions.ManuscriptNotFound;
 import co.com.mevieval.dynamodb.helper.ManuscriptMapper;
 import co.com.mevieval.model.manuscript.Manuscript;
 import co.com.mevieval.model.manuscript.gateways.ManuscriptRepository;
@@ -42,6 +43,20 @@ public class DynamoDBTemplateAdapter implements ManuscriptRepository{
                 });
             }
         });
+    }
+
+    @Override
+    public Mono<Object> findManuscript(Manuscript manuscript) {
+        return Mono.fromFuture(this.table.getItem(GetItemEnhancedRequest.builder()
+                .key(Key.builder()
+                        .partitionValue(mapper.toEntity(manuscript).getUniqueId()).build())
+                .build()))
+                .flatMap(item -> {
+                    if (item.getCountClueFound() == 0 && item.getCountNoClue() == 0){
+                        return Mono.error(new ManuscriptNotFound("No manuscript found for the given uniqueId."));
+                    }
+                    return Mono.just(mapper.toStat(item));
+                });
     }
 
     private Mono<Boolean> findManuscript(String manuscriptId){        
