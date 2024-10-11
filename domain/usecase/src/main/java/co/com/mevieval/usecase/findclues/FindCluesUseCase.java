@@ -1,9 +1,10 @@
 package co.com.mevieval.usecase.findclues;
 
 import lombok.RequiredArgsConstructor;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.util.*;
 
 import co.com.mevieval.model.manuscript.Manuscript;
 import co.com.mevieval.model.manuscript.gateways.ManuscriptRepository;
@@ -24,126 +25,118 @@ public class FindCluesUseCase {
     /**
      * Método para recorrer el flux de arreglos
      */
-    public Boolean findClues(Manuscript m) {
+    public Mono<Boolean> findClues(Manuscript m) {
+        return Flux.fromIterable(m.getManuscript())
+        .index()
+                .flatMap(indexAndRow -> {
+                    return Flux.fromArray(indexAndRow.getT2().chars()
+                            .mapToObj(c -> (char) c)
+                            .toArray(Character[]::new))
+                            .index()
+                            .flatMap(indexAndColumn -> {
+                                //Reglas para disminuir las interaciones
+                                Map<String, Boolean> rules = calculateRules(indexAndRow.getT1().intValue(),
+                                        indexAndColumn.getT1().intValue(),
+                                        m.getManuscript());
+                                int i = indexAndRow.getT1().intValue();
+                                int j = indexAndColumn.getT1().intValue();
 
-        /**
-         * TODO: Cambia cuando migre la impl imperativa a reactiva
-         */
-        var manuscript = m.getManuscript();
-        
-        boolean existManuscripts = false;
+                                char searchCriteria = m.getManuscript().get(i).charAt(j);
 
-        for (int i = 0; i < manuscript.size(); i++) {
-            for (int j = 0; j < manuscript.get(i).length(); j++) {
-                if (search(i, j, manuscript, manuscript.get(i).charAt(j))) {
-                    existManuscripts = true;
-                }
-            }
-        }
-
-        if (existManuscripts)
-            System.err.println("Clues Found");
-        
-        return manuscriptRepository
-        .save(m)
-        .block();
+                                //Busquedas de Clue
+                                return Flux.zip(triggerBottomRightOrientation(m, rules, i, j, searchCriteria),
+                                        triggerRightOrientation(m, rules, i, j, searchCriteria),
+                                        triggerBottomOrientation(m, rules, i, j, searchCriteria),
+                                        triggerBottomLeftOrientation(m, rules, i, j, searchCriteria));
+                            });
+                })
+                .doOnNext(zipOfSearching -> {
+                    if(zipOfSearching.getT1() != 3 && zipOfSearching.getT2() != 3
+                            && zipOfSearching.getT3() != 3 && zipOfSearching.getT4() != 3)
+                        m.setNoClue(m.getNoClue() + 1);
+                })
+                .last()
+                .flatMap(lastExec -> manuscriptRepository.save(m))
+                .map(result -> m.getClue() != 0);
     }
 
-    private boolean search(int i, int j, List<String> manuscript, char character) {
+    /**
+     * Método para calcular estadisticas por manuscrito
+     */
 
-        Map<String, Boolean> rules = calculateRules(i, j, manuscript);
-        boolean existBottomRight = false;
-        boolean existBottomLeft = false;
-        boolean existBottom = false;
-        boolean existRight = false;
-
-        if (rules.get(BOTTOM_RIGHT_ORIENTATION)) {
-            existBottomRight = existManuscriptInBottomRight(i, j, manuscript, character);
-        }
-
-        if (rules.get(BOTTOM_LEFT_ORIENTATION)) {
-            existBottomLeft = existManuscriptInBottomLeft(i, j, manuscript, character);
-        }
-
-        if (rules.get(BOTTOM_ORIENTATION)) {
-            existBottom = existManuscriptInBottom(i, j, manuscript, character);
-        }
-
-        if (rules.get(RIGHT_ORIENTATION)) {
-            existRight = existManuscriptInRight(i, j, manuscript, character);
-        }
-
-        if (existBottomLeft)
-            System.err.println("existe manuscripto en el recorrido abajo izquierda con el caracter: " + character);
-        if (existBottomRight)
-            System.err.println("existe manuscrito en el recorrido abajo derecha con el caracter: " + character);
-        if (existBottom)
-            System.err.println("existe manuscrito en el recorrido abajo con el caracter: " + character);
-        if (existRight)
-            System.err.println("existe manuscrito en el recorrido derecha con el caracter: " + character);
-
-        return existBottomLeft || existBottomRight || existBottom || existRight;
-        // Si la ocurrencia es 3 retorne true y guarde en base de datos.
+    public Mono<Object> calculateStats(Manuscript m){
+        return manuscriptRepository.findManuscript(m);
     }
 
-    private boolean existManuscriptInRight(int i, int j, List<String> manuscript, char character) {
-        int counterOfOcurrences = 0;
+    private static Mono<Integer> triggerBottomRightOrientation(Manuscript m, Map<String, Boolean> rules, int i, int j, char searchCriteria) {
 
-        for (int k = 1; k <= 3; k++) {
-            if (manuscript.get(i).charAt(j + k) == character) {
-                counterOfOcurrences++;
-                if (k == 3)
-                    return counterOfOcurrences == 3;
-            } else {
-                return false;
-            }
+        List<Character> charactersToCheck = new ArrayList<>();
+
+        if (Boolean.TRUE.equals(rules.get(BOTTOM_RIGHT_ORIENTATION))) {
+            charactersToCheck = Arrays.asList(
+                    m.getManuscript().get(i + 1).charAt(j + 1),
+                    m.getManuscript().get(i + 2).charAt(j + 2),
+                    m.getManuscript().get(i + 3).charAt(j + 3)
+            );
         }
-        return false;
+
+        return validateCharacters(m, searchCriteria, charactersToCheck);
     }
 
-    private boolean existManuscriptInBottom(int i, int j, List<String> manuscript, char character) {
-        int counterOfOcurrences = 0;
+    private static Mono<Integer> triggerRightOrientation(Manuscript m, Map<String, Boolean> rules, int i, int j, char searchCriteria) {
 
-        for (int k = 1; k <= 3; k++) {
-            if (manuscript.get(i + k).charAt(j) == character) {
-                counterOfOcurrences++;
-                if (k == 3)
-                    return counterOfOcurrences == 3;
-            } else {
-                return false;
-            }
+        List<Character> charactersToCheck = new ArrayList<>();
+
+        if (Boolean.TRUE.equals(rules.get(RIGHT_ORIENTATION))) {
+            charactersToCheck = Arrays.asList(
+                    m.getManuscript().get(i).charAt(j + 1),
+                    m.getManuscript().get(i).charAt(j + 2),
+                    m.getManuscript().get(i).charAt(j + 3)
+            );
         }
-        return false;
+
+        return validateCharacters(m, searchCriteria, charactersToCheck);
     }
 
-    private boolean existManuscriptInBottomLeft(int i, int j, List<String> manuscript, char character) {
-        int counterOfOcurrences = 0;
-
-        for (int k = 1; k <= 3; k++) {
-            if (manuscript.get(i + k).charAt(j - k) == character) {
-                counterOfOcurrences++;
-                if (k == 3)
-                    return counterOfOcurrences == 3;
-            } else {
-                return false;
-            }
-        }
-        return false;
+    private static Mono<Integer> validateCharacters(Manuscript m, char searchCriteria, List<Character> charactersToCheck) {
+        return Flux.fromIterable(charactersToCheck)
+                .filter(elementPivote -> searchCriteria == elementPivote)
+                .count()
+                .flatMap(count -> {
+                    if (count.intValue() == 3) {
+                        m.setClue(m.getClue() + 1);
+                    }
+                    return Mono.just(count.intValue());
+                })
+                .switchIfEmpty(Mono.just(0));
     }
 
-    private boolean existManuscriptInBottomRight(int i, int j, List<String> manuscript, char character) {
-        int counterOfOcurrences = 0;
+    private static Mono<Integer> triggerBottomOrientation(Manuscript m, Map<String, Boolean> rules, int i, int j, char searchCriteria) {
+        List<Character> charactersToCheck = new ArrayList<>();
 
-        for (int k = 1; k <= 3; k++) {
-            if (manuscript.get(i + k).charAt(j + k) == character) {
-                counterOfOcurrences++;
-                if (k == 3)
-                    return counterOfOcurrences == 3;
-            } else {
-                return false;
-            }
+        if (Boolean.TRUE.equals(rules.get(BOTTOM_ORIENTATION))) {
+            charactersToCheck = Arrays.asList(
+                    m.getManuscript().get(i + 1).charAt(j),
+                    m.getManuscript().get(i + 2).charAt(j),
+                    m.getManuscript().get(i + 3).charAt(j)
+            );
         }
-        return false;
+
+        return validateCharacters(m, searchCriteria, charactersToCheck);
+    }
+
+    private static Mono<Integer> triggerBottomLeftOrientation(Manuscript m, Map<String, Boolean> rules, int i, int j, char searchCriteria) {
+        List<Character> charactersToCheck = new ArrayList<>();
+
+        if (Boolean.TRUE.equals(rules.get(BOTTOM_LEFT_ORIENTATION))) {
+            charactersToCheck = Arrays.asList(
+                    m.getManuscript().get(i + 1).charAt(j - 1),
+                    m.getManuscript().get(i + 2).charAt(j - 2),
+                    m.getManuscript().get(i + 3).charAt(j - 3)
+            );
+        }
+
+        return validateCharacters(m, searchCriteria, charactersToCheck);
     }
 
     private Map<String, Boolean> calculateRules(int i, int j, List<String> manuscript) {
@@ -154,9 +147,9 @@ public class FindCluesUseCase {
         rules.put(BOTTOM_ORIENTATION, true);
         rules.put(RIGHT_ORIENTATION, true);
 
-        if (j < 3) {
+        if (j < 3)
             rules.replace(BOTTOM_LEFT_ORIENTATION, false);
-        }
+
         if (j + 3 > manuscript.get(i).length() - 1) {
             rules.replace(RIGHT_ORIENTATION, false);
             rules.replace(BOTTOM_RIGHT_ORIENTATION, false);
